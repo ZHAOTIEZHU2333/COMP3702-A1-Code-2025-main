@@ -49,7 +49,7 @@ class Solver:
         :return: a string containing which search methods to run ("ucs" to only run UCS, "a_star" to only run A*,
         and "both" to run both).
         """
-        return "a_star"
+        return "both"
     
     
 
