@@ -1,3 +1,4 @@
+import time
 from game_env import GameEnv
 from game_state import GameState
 
@@ -19,6 +20,11 @@ class Solver:
         self.game_env = game_env
         self.actions = list(self.game_env.ACTIONS)
         self.action_costs = dict(self.game_env.ACTION_COST)
+
+        self.expanded = 0       
+        self.generated = 0      
+        self.frontier_max = 0    
+        self.runtime_sec = 0.0   
 
         self._h_cache = None
 
@@ -71,6 +77,16 @@ class Solver:
         """
         Return: list of action strings (each in GameEnv.ACTIONS) from start to goal, minimizing total cost.
         """
+        self.expanded = 0
+        self.generated = 0
+        self.frontier_max = 0
+        t0 = time.perf_counter() 
+
+        if self.game_env.is_solved(start_state):
+            self.runtime_sec = 0.0  
+            return []
+
+
         start_state: GameState = self.game_env.get_init_state()
 
         if self.game_env.is_solved(start_state):
@@ -90,13 +106,19 @@ class Solver:
         start_node = Node(start_state, 0.0, None, None)
         heapq.heappush(frontier, (0.0, next(counter), start_node))
 
+        self.generated += 1
+        if len(frontier) > self.frontier_max:
+            self.frontier_max = len(frontier)
+
         best_cost = {start_state: 0.0}
 
         while frontier:
             g_curr, _, node = heapq.heappop(frontier)
+            self.expanded += 1
             if g_curr > best_cost.get(node.state, float("inf")) + 1e-12:
                 continue
             if self.game_env.is_solved(node.state):
+                self.runtime_sec = time.perf_counter() - t0
                 return self._reconstruct_path(node)
 
             for action in self.actions:
@@ -110,6 +132,7 @@ class Solver:
                     best_cost[next_state] = g_next
                     child = Node(next_state, g_next, node, action)
                     heapq.heappush(frontier, (g_next, next(counter), child))
+        self.runtime_sec = time.perf_counter() - t0
         return []
     # ===============================================
 
@@ -170,7 +193,15 @@ class Solver:
             (r1, c1), (r2, c2) = p, q
             dx = abs(c2 - c1)
             dy = r2 - r1
-            return (self._h_cost_h * dx + self._h_cost_up * max(dy, 0) + self._h_cost_dn * max(-dy, 0))
+
+   
+            horiz_lb = self._h_cost_h * dx
+  
+            up_lb = self._h_cost_up * max(dy, 0)
+    
+            down_lb = self._h_cost_dn if dy < 0 else 0.0
+
+            return horiz_lb + up_lb + down_lb
        
         remaining_idx = [i for i, s in enumerate(state.trap_status) if s == 0]
         
@@ -217,8 +248,14 @@ class Solver:
 
         self.preprocess_heuristic()
 
+        self.expanded = 0
+        self.generated = 0
+        self.frontier_max = 0
+        t0 = time.perf_counter()
+
         start_state: GameState = self.game_env.get_init_state()
         if self.game_env.is_solved(start_state):
+            self.runtime_sec = 0.0
             return []
 
         class Node:
@@ -245,11 +282,14 @@ class Solver:
         while frontier:
             f_curr, _, node = heapq.heappop(frontier)
 
+            self.expanded += 1
+
             
             if node.g > best_cost.get(node.state, float("inf")) + 1e-12:
                 continue
 
             if self.game_env.is_solved(node.state):
+                self.runtime_sec = time.perf_counter() - t0
                 return self._reconstruct_path(node)
 
             for action in self.actions:
@@ -267,8 +307,11 @@ class Solver:
                     f_next = g_next + h_next
                     child = Node(next_state, g_next, node, action)
                     heapq.heappush(frontier, (f_next, next(counter), child))
+                    self.generated += 1
+                    if len(frontier) > self.frontier_max:
+                        self.frontier_max = len(frontier)
 
-        
+        self.runtime_sec = time.perf_counter() - t0
         return []
 
         
