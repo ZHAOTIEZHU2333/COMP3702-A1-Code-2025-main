@@ -190,15 +190,43 @@ class Solver:
             (r1, c1), (r2, c2) = p, q
             dx = abs(c2 - c1)
             dy = r2 - r1
-            horiz_lb = self._h_cost_h * dx
-            up_lb    = self._h_cost_up * (dy if dy > 0 else 0)      
-            down_lb  = self._h_cost_dn * (-dy if dy < 0 else 0)     
-            return horiz_lb + up_lb + down_lb
-        
 
-        h_val = action_weighted_L1((pr, pc), self._goal_rc)
+   
+            horiz_lb = self._h_cost_h * dx
+  
+            up_lb = self._h_cost_up * max(dy, 0)
+    
+            down_lb = self._h_cost_dn if dy < 0 else 0.0
+
+            return horiz_lb + up_lb + down_lb
        
+        remaining_idx = [i for i, s in enumerate(state.trap_status) if s == 0]
         
+        if not remaining_idx:
+            h_val = action_weighted_L1((pr, pc), self._goal_rc)
+        else:
+            remain_levers = [self._all_levers[i] for i in remaining_idx]
+
+            first_leg = min(action_weighted_L1((pr, pc), L) for L in remain_levers)
+
+            k = len(remain_levers)
+            if k >= 2:
+                pair_min = min(
+                    action_weighted_L1(L1, L2)
+                    for i, L1 in enumerate(remain_levers)
+                    for j, L2 in enumerate(remain_levers)
+                    if i != j
+                )
+                between_legs = pair_min * (k - 1)
+            else:
+                between_legs = 0.0
+
+            to_goal = min(action_weighted_L1(L, self._goal_rc) for L in remain_levers)
+
+            best_chain = first_leg + between_legs + to_goal
+
+            h_val = best_chain
+
 
 
         if self._h_cache is not None:
