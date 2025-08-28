@@ -49,7 +49,7 @@ class Solver:
         :return: a string containing which search methods to run ("ucs" to only run UCS, "a_star" to only run A*,
         and "both" to run both).
         """
-        return "both"
+        return "a_star"
     
     
 
@@ -183,7 +183,7 @@ class Solver:
         while frontier:
             f_curr, _, node = heapq.heappop(frontier)
 
-            # “过期节点”剪枝：如果已有更优 g，跳过
+            
             if node.g > best_cost.get(node.state, float("inf")) + 1e-12:
                 continue
 
@@ -206,7 +206,7 @@ class Solver:
                     child = Node(next_state, g_next, node, action)
                     heapq.heappush(frontier, (f_next, next(counter), child))
 
-        # 正常不会到达这里（无解）
+        
         return []
 
         
