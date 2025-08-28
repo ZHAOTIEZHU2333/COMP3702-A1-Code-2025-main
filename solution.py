@@ -129,19 +129,63 @@ class Solver:
         if self._h_cache is None:
             self._h_cache = {}
 
+    
+        walk   = self.action_costs.get("wl", 1.0)
+        sprint = min(self.action_costs.get("sr", 1.9), self.action_costs.get("sl", 1.9))
+        climb  = self.action_costs.get("c", 2.0)
+        jump   = self.action_costs.get("j", 2.0)
+        drop   = self.action_costs.get("d", 0.5)
+        activate = self.action_costs.get("a", 1.0)
+
+  
+        self._h_cost_h  = min(walk, sprint / 2.0)
+   
+        self._h_cost_up = min(climb, jump)
+    
+        self._h_cost_dn = drop
+    
+        self._h_cost_activate = activate
+
+    
+        self._goal_rc = (self.game_env.goal_row, self.game_env.goal_col)
+    
+        self._all_levers = list(self.game_env.lever_positions)
+
 
 
 
         
 
     def compute_heuristic(self, state: GameState) -> float:
-        """
-        Compute a heuristic value h(n) for the given state.
-        :param state: given state (GameState object)
-        :return a real number h(n)
-        """
+        if self._h_cache is not None:
+            hv = self._h_cache.get(state)
+            if hv is not None:
+                return hv
 
-        return 0.0
+   
+        pr, pc = state.row, state.col
+
+   
+        def action_weighted_L1(p, q):
+            (r1, c1), (r2, c2) = p, q
+            dx = abs(c2 - c1)
+            dy = r2 - r1
+            return (self._h_cost_h * dx + self._h_cost_up * max(dy, 0) + self._h_cost_dn * max(-dy, 0))
+       
+        remaining_idx = [i for i, s in enumerate(state.trap_status) if s == 0]
+        
+        if not remaining_idx:
+            h_val = action_weighted_L1((pr, pc), self._goal_rc)
+        else:
+            remain_levers = [self._all_levers[i] for i in remaining_idx]
+            best_chain = min(
+            action_weighted_L1((pr, pc), L) + action_weighted_L1(L, self._goal_rc)
+            for L in remain_levers)
+            h_val = best_chain + self._h_cost_activate * len(remain_levers)
+
+        if self._h_cache is not None:
+            self._h_cache[state] = h_val
+        return h_val
 
        
 
