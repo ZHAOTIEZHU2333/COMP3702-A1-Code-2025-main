@@ -178,10 +178,28 @@ class Solver:
             h_val = action_weighted_L1((pr, pc), self._goal_rc)
         else:
             remain_levers = [self._all_levers[i] for i in remaining_idx]
-            best_chain = min(action_weighted_L1((pr, pc), L) for L in remain_levers) \
-           + min(action_weighted_L1(L1, L2) for L1 in remain_levers for L2 in remain_levers if L1 != L2) * (len(remain_levers) - 1 if len(remain_levers) > 1 else 0) \
-           + min(action_weighted_L1(L, self._goal_rc) for L in remain_levers)
-            h_val = best_chain + self._h_cost_activate * len(remain_levers)
+
+            first_leg = min(action_weighted_L1((pr, pc), L) for L in remain_levers)
+
+            k = len(remain_levers)
+            if k >= 2:
+                pair_min = min(
+                    action_weighted_L1(L1, L2)
+                    for i, L1 in enumerate(remain_levers)
+                    for j, L2 in enumerate(remain_levers)
+                    if i != j
+                )
+                between_legs = pair_min * (k - 1)
+            else:
+                between_legs = 0.0
+
+            to_goal = min(action_weighted_L1(L, self._goal_rc) for L in remain_levers)
+
+            best_chain = first_leg + between_legs + to_goal
+
+            h_val = best_chain
+
+
 
         if self._h_cache is not None:
             self._h_cache[state] = h_val
