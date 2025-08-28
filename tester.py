@@ -66,7 +66,13 @@ def main(arglist):
         else:
             solver.preprocess_heuristic()
             actions = solver.search_a_star()
+    try:
+        print(f"[Stats] Expanded={solver.expanded}, Generated={solver.generated}, FrontierMax={solver.frontier_max}")
+    except AttributeError:
+        pass
     run_time = (time.time() - t0) / trials
+    
+
 
     # Evaluate solution
     control_env = ControlEnv(testcase_file)
