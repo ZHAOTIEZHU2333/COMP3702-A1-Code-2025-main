@@ -178,9 +178,9 @@ class Solver:
             h_val = action_weighted_L1((pr, pc), self._goal_rc)
         else:
             remain_levers = [self._all_levers[i] for i in remaining_idx]
-            best_chain = min(
-            action_weighted_L1((pr, pc), L) + action_weighted_L1(L, self._goal_rc)
-            for L in remain_levers)
+            best_chain = min(action_weighted_L1((pr, pc), L) for L in remain_levers) \
+           + min(action_weighted_L1(L1, L2) for L1 in remain_levers for L2 in remain_levers if L1 != L2) * (len(remain_levers) - 1 if len(remain_levers) > 1 else 0) \
+           + min(action_weighted_L1(L, self._goal_rc) for L in remain_levers)
             h_val = best_chain + self._h_cost_activate * len(remain_levers)
 
         if self._h_cache is not None:
