@@ -82,14 +82,11 @@ class Solver:
         self.frontier_max = 0
         t0 = time.perf_counter() 
 
-        if self.game_env.is_solved(start_state):
-            self.runtime_sec = 0.0  
-            return []
-
-
+        
         start_state: GameState = self.game_env.get_init_state()
 
         if self.game_env.is_solved(start_state):
+            self.runtime_sec = 0.0  
             return []
 
         class Node:
